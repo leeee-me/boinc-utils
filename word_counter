@@ -1,0 +1,11 @@
+#!/bin/bash
+
+awk '
+{
+    split($0, b); for (i in b) ++A[b[i]]
+}
+END {
+    split("'"$*"'", a)
+    for (i in a) print sprintf("%s %d", a[i], A[a[i]])
+}
+'

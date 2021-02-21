@@ -1,0 +1,12 @@
+#!/bin/bash
+
+NT=`date +%s`
+NTX=`date +"%FT%R"`
+NTW=$(($NT - 86400))
+IFS=$'\n'
+echo "====== BOINC Messages Reported by `date -d @$NTW` ~ `date -d @$NT`"
+for i in `boinccmd --get_messages | grep -e [Ss]tart -e [Rr]eport -e [Ss]end -e [Ff]inish -e [Ff]ail -e [Aa]bort -e Computation -e 'user notification' -e '\[\]' | grep -v scheduler`; do 
+	DT=`echo $i | cut -d' ' -f 2,3`
+	UT=`date +%s -d "$DT"`
+	[ $UT -ge $NTW ] && echo $i | cut -d' ' -f 2-
+done

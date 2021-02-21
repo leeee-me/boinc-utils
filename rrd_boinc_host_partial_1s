@@ -1,0 +1,152 @@
+#!/bin/bash
+
+cd $HOME/rrd
+
+for url in $(boinccmd --get_project_status | sed -n 's/\s*master URL: //p'); do
+  boinccmd --project ${url} update;
+done
+
+declare -A myArray
+
+myArray=(\
+['milkyway.cs.rpi.edu/milkyway/']='crmilkyway' \
+['einstein.phys.uwm.edu/']='creinstein' \
+['boinc.bakerlab.org/rosetta/']='crrosetta' \
+['lhcathome.cern.ch/lhcathome/']='crlhc' \
+['www.worldcommunitygrid.org/']='crwcg' \
+['x1']='crx1')
+
+declare -A myLblArray
+
+myLblArray=(\
+['crmilkyway']='MilkyWay@home' \
+['creinstein']='Einstein@Home' \
+['crrosetta']='Rosetta@home' \
+['crseti']='SETI@home' \
+['crlhc']='LHC@home' \
+['crwcg']='WCG' \
+['crx1']='...')
+
+declare -A myLblAbbArray
+
+myLblAbbArray=(\
+['crmilkyway']='M@h' \
+['creinstein']='E@H' \
+['crrosetta']='R@h' \
+['crseti']='S@h' \
+['crlhc']='L@h' \
+['crwcg']='WCG' \
+['crx1']='.')
+
+D=`boinccmd --get_project_status | grep -e "host_total_credit:" -e "master URL:" | awk '{print $2 $3}' | sed -e 's/URL:[^:]*:\/\///g'`
+U1=`echo $D | awk '{print $1}'`; U1=${U1:-x1}
+
+F1=${myArray[$U1]}
+
+D1=`echo $D | awk '{print int($2)}'`
+
+# create database if not exists
+[ -f boinc_host.rrd ] || {
+rrdtool create boinc_host.rrd --start now-30d --step 1h \
+   DS:`echo $F1`:GAUGE:1d:U:U \
+   RRA:LAST:0.5:1h:30d
+}
+
+[ -z "$1" ] && rrdtool update boinc_host.rrd -t $F1 N:$D1
+#[ -z "$1" ] && rrdtool dump boinc_host.rrd | grep "<row>" | tail -n 1 | sed -e 's/<[//a-zA-Z]*>/ /g' | awk '{printf "%s %s %s / %d --> %d\n", $2, $3, $4, $6, $8}'
+#[ -z "$1" ] && rrdtool lastupdate boinc_host.rrd | tail -n 1
+
+D=`boinccmd --get_project_status | grep -e "host_expavg_credit:" -e "master URL:" | awk '{print $2 $3}' | sed -e 's/URL:[^:]*:\/\///g'`
+U1=`echo $D | awk '{print $1}'`; U1=${U1:-x1}
+
+F1=${myArray[$U1]}
+
+D1=`echo $D | awk '{print int($2)}'`
+
+cd $HOME/rrd
+
+[ -f boinc_avg_host.rrd ] || {
+rrdtool create boinc_avg_host.rrd --start now-30d --step 1h \
+   DS:`echo $F1`:GAUGE:1d:U:U \
+   RRA:LAST:0.5:1h:30d
+}
+
+[ -z "$1" ] && rrdtool update boinc_avg_host.rrd -t $F1 N:$D1
+#[ -z "$1" ] && rrdtool dump boinc_avg_host.rrd | grep "<row>" | tail -n 1 | sed -e 's/<[//a-zA-Z]*>/ /g' | awk '{printf "%s %s %s / %d --> %d\n", $2, $3, $4, $6, $8}'
+#[ -z "$1" ] && rrdtool lastupdate boinc_avg_host.rrd | tail -n 1
+
+P=`boinccmd --get_project_status | grep "master URL:" | awk '{ print $3 }' | paste -sd " " - && echo "x1 x2"`
+Q=`echo $P | awk '{ print $1 " " $2 }'`
+D=`boinccmd --get_tasks | grep -e proj|word_counter $Q|sed -e 's/https\{0,\}:\/\///g'`
+
+TU1=`echo $D | awk '{print $1}'`
+
+TF1=${myArray[$TU1]}
+
+TD1=`echo $D | awk '{print int($2)}'`
+
+cd $HOME/rrd
+
+# create database if not exists
+[ -f boinc_tasks_host.rrd ] || {
+rrdtool create boinc_tasks_host.rrd --start now-30d --step 1h \
+   DS:`echo $TF1`:GAUGE:1d:U:U \
+   RRA:LAST:0.5:1h:30d
+}
+
+[ -z "$1" ] && rrdtool update boinc_tasks_host.rrd -t $TF1 N:$TD1
+#[ -z "$1" ] && rrdtool dump boinc_tasks_host.rrd | grep "<row>" | tail -n 1 | sed -e 's/<[//a-zA-Z]*>/ /g' | awk '{printf "%s %s %s / %d --> %d %d %d %d %d\n", $2, $3, $4, $6, $8, $9, $10, $11, $12}'
+#[ -z "$1" ] && rrdtool lastupdate boinc_tasks_host.rrd | tail -n 1
+
+
+[ -z "$1" ] && exit 0
+
+DDD=`date +"%FT%R%:z %Z"`
+
+L1=${myLblArray[$F1]}
+
+LA1=${myLblAbbArray[$F1]}
+
+rrdtool graph \
+--width 800 \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Host Total $DDD" \
+-v "Credits" \
+--alt-y-grid \
+boinc_host.png \
+DEF:crr=boinc_host.rrd:`echo $F1`:LAST \
+LINE2:crr#e90505:"`echo $L1`" \
+GPRINT:crr:LAST:"`echo $LA1`\: %0.0lf\t" \
+2>&1 > /dev/null
+
+rrdtool graph \
+--width 800 -l -25 -r \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Host Average $DDD" \
+-v "Credits" \
+--alt-y-grid \
+boinc_avg_host.png \
+DEF:crr=boinc_avg_host.rrd:`echo $F1`:LAST \
+AREA:crr#e90505:"`echo $L1`":STACK \
+GPRINT:crr:LAST:"`echo $LA1`\: %0.0lf\t" \
+2>&1 > /dev/null
+
+TL1=${myLblArray[$TF1]}
+
+TLA1=${myLblAbbArray[$TF1]}
+
+rrdtool graph \
+--width 800 -l -2 -r \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Host Tasks $DDD" \
+-v "Tasks" \
+--alt-y-grid \
+boinc_tasks_host.png \
+DEF:crr=boinc_tasks_host.rrd:`echo $TF1`:LAST \
+LINE2:crr#e90505:"`echo $TL1`" \
+GPRINT:crr:LAST:"`echo $TLA1`\: %0.0lf\t" \
+2>&1 > /dev/null
+

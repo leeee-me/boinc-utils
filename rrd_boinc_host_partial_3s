@@ -1,0 +1,200 @@
+#!/bin/bash
+
+cd $HOME/rrd
+
+for url in $(boinccmd --get_project_status | sed -n 's/\s*master URL: //p'); do
+  boinccmd --project ${url} update;
+done
+
+declare -A myArray
+
+myArray=(\
+['milkyway.cs.rpi.edu/milkyway/']='crmilkyway' \
+['einstein.phys.uwm.edu/']='creinstein' \
+['boinc.bakerlab.org/rosetta/']='crrosetta' \
+['lhcathome.cern.ch/lhcathome/']='crlhc' \
+['www.worldcommunitygrid.org/']='crwcg' \
+['x1']='crx1' \
+['x2']='crx2' \
+['x3']='crx3')
+
+declare -A myLblArray
+
+myLblArray=(\
+['crmilkyway']='MilkyWay@home' \
+['creinstein']='Einstein@Home' \
+['crrosetta']='Rosetta@home' \
+['crlhc']='LHC@home' \
+['crwcg']='WCG' \
+['crx1']='...' \
+['crx2']='...' \
+['crx3']='...')
+
+declare -A myLblAbbArray
+
+myLblAbbArray=(\
+['crmilkyway']='M@h' \
+['creinstein']='E@H' \
+['crrosetta']='R@h' \
+['crlhc']='L@h' \
+['crwcg']='WCG' \
+['crx1']='.' \
+['crx2']='.' \
+['crx3']='.')
+
+D=`boinccmd --get_project_status | grep -e "host_total_credit:" -e "master URL:" | awk '{print $2 $3}' | sed -e 's/URL:[^:]*:\/\///g'`
+U1=`echo $D | awk '{print $1}'`; U1=${U1:-x1}
+U2=`echo $D | awk '{print $3}'`; U2=${U2:-x2}
+U3=`echo $D | awk '{print $5}'`; U2=${U2:-x3}
+
+F1=${myArray[$U1]}
+F2=${myArray[$U2]}
+F3=${myArray[$U3]}
+
+D1=`echo $D | awk '{print int($2)}'`
+D2=`echo $D | awk '{print int($4)}'`
+D3=`echo $D | awk '{print int($6)}'`
+
+# create database if not exists
+[ -f boinc_host.rrd ] || {
+rrdtool create boinc_host.rrd --start now-30d --step 1h \
+   DS:`echo $F1`:GAUGE:1d:U:U \
+   DS:`echo $F2`:GAUGE:1d:U:U \
+   DS:`echo $F3`:GAUGE:1d:U:U \
+   RRA:LAST:0.5:1h:30d
+}
+
+[ -z "$1" ] && rrdtool update boinc_host.rrd -t $F1:$F2:$F3 N:$D1:$D2:$D3
+
+D=`boinccmd --get_project_status | grep -e "host_expavg_credit:" -e "master URL:" | awk '{print $2 $3}' | sed -e 's/URL:[^:]*:\/\///g'`
+U1=`echo $D | awk '{print $1}'`; U1=${U1:-x1}
+U2=`echo $D | awk '{print $3}'`; U2=${U2:-x2}
+U3=`echo $D | awk '{print $5}'`; U2=${U2:-x3}
+
+F1=${myArray[$U1]}
+F2=${myArray[$U2]}
+F3=${myArray[$U3]}
+
+D1=`echo $D | awk '{print int($2)}'`
+D2=`echo $D | awk '{print int($4)}'`
+D3=`echo $D | awk '{print int($6)}'`
+
+cd $HOME/rrd
+
+[ -f boinc_avg_host.rrd ] || {
+rrdtool create boinc_avg_host.rrd --start now-30d --step 1h \
+   DS:`echo $F1`:GAUGE:1d:U:U \
+   DS:`echo $F2`:GAUGE:1d:U:U \
+   DS:`echo $F3`:GAUGE:1d:U:U \
+   RRA:LAST:0.5:1h:30d
+}
+
+[ -z "$1" ] && rrdtool update boinc_avg_host.rrd -t $F1:$F2:$F3 N:$D1:$D2:$D3
+
+P=`boinccmd --get_project_status | grep "master URL:" | awk '{ print $3 }' | paste -sd " " - && echo "x1 x2 x3"`
+Q=`echo $P | awk '{ print $1 " " $2 " " $3 }'`
+D=`boinccmd --get_tasks | grep -e proj|word_counter $Q|sed -e 's/https\{0,\}:\/\///g'`
+
+TU1=`echo $D | awk '{print $1}'`
+TU2=`echo $D | awk '{print $3}'`
+TU3=`echo $D | awk '{print $5}'`
+
+TF1=${myArray[$TU1]}
+TF2=${myArray[$TU2]}
+TF3=${myArray[$TU3]}
+
+TD1=`echo $D | awk '{print int($2)}'`
+TD2=`echo $D | awk '{print int($4)}'`
+TD3=`echo $D | awk '{print int($6)}'`
+
+cd $HOME/rrd
+
+# create database if not exists
+[ -f boinc_tasks_host.rrd ] || {
+rrdtool create boinc_tasks_host.rrd --start now-30d --step 1h \
+   DS:`echo $TF1`:GAUGE:1d:U:U \
+   DS:`echo $TF2`:GAUGE:1d:U:U \
+   DS:`echo $TF3`:GAUGE:1d:U:U \
+   RRA:LAST:0.5:1h:30d
+}
+
+[ -z "$1" ] && rrdtool update boinc_tasks_host.rrd -t $TF1:$TF2:$TF3 N:$TD1:$TD2:$TD3
+
+
+[ -z "$1" ] && exit 0
+
+DDD=`date +"%FT%R%:z %Z"`
+
+L1=${myLblArray[$F1]}
+L2=${myLblArray[$F2]}
+L3=${myLblArray[$F3]}
+
+LA1=${myLblAbbArray[$F1]}
+LA2=${myLblAbbArray[$F2]}
+LA3=${myLblAbbArray[$F3]}
+
+rrdtool graph \
+--width 800 \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Host Total $DDD" \
+-v "Credits" \
+--alt-y-grid \
+boinc_host.png \
+DEF:crr=boinc_host.rrd:`echo $F1`:LAST \
+DEF:crm=boinc_host.rrd:`echo $F2`:LAST \
+DEF:crw=boinc_host.rrd:`echo $F3`:LAST \
+LINE2:crr#e90505:"`echo $L1`" \
+LINE2:crm#eacc00:"`echo $L2`" \
+LINE2:crw#ea8f00:"`echo $L3`" \
+GPRINT:crr:LAST:"`echo $LA1`\: %0.0lf" \
+GPRINT:crm:LAST:"`echo $LA2`\: %0.0lf\t" \
+GPRINT:crw:LAST:"`echo $LA3`\: %0.0lf\t" \
+2>&1 > /dev/null
+
+rrdtool graph \
+--width 800 -l -25 -r \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Host Average $DDD" \
+-v "Credits" \
+--alt-y-grid \
+boinc_avg_host.png \
+DEF:crr=boinc_avg_host.rrd:`echo $F1`:LAST \
+DEF:crm=boinc_avg_host.rrd:`echo $F2`:LAST \
+DEF:crw=boinc_avg_host.rrd:`echo $F3`:LAST \
+AREA:crr#e90505:"`echo $L1`":STACK \
+AREA:crm#eacc00:"`echo $L2`":STACK \
+AREA:crw#ea8f00:"`echo $L3`":STACK \
+GPRINT:crr:LAST:"`echo $LA1`\: %0.0lf" \
+GPRINT:crm:LAST:"`echo $LA2`\: %0.0lf\t" \
+GPRINT:crw:LAST:"`echo $LA3`\: %0.0lf\t" \
+2>&1 > /dev/null
+
+TL1=${myLblArray[$TF1]}
+TL2=${myLblArray[$TF2]}
+TL3=${myLblArray[$TF3]}
+
+TLA1=${myLblAbbArray[$TF1]}
+TLA2=${myLblAbbArray[$TF2]}
+TLA3=${myLblAbbArray[$TF3]}
+
+rrdtool graph \
+--width 800 -l -2 -r \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Host Tasks $DDD" \
+-v "Tasks" \
+--alt-y-grid \
+boinc_tasks_host.png \
+DEF:crr=boinc_tasks_host.rrd:`echo $TF1`:LAST \
+DEF:crm=boinc_tasks_host.rrd:`echo $TF2`:LAST \
+DEF:crw=boinc_tasks_host.rrd:`echo $TF3`:LAST \
+LINE2:crr#e90505:"`echo $TL1`" \
+LINE2:crm#eacc00:"`echo $TL2`" \
+LINE2:crw#ea8f00:"`echo $TL3`" \
+GPRINT:crr:LAST:"`echo $TLA1`\: %0.0lf" \
+GPRINT:crm:LAST:"`echo $TLA2`\: %0.0lf\t" \
+GPRINT:crw:LAST:"`echo $TLA3`\: %0.0lf\t" \
+2>&1 > /dev/null
+

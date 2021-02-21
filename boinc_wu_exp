@@ -1,0 +1,49 @@
+#!/bin/bash
+
+NOW=`/bin/date +%s`
+THEN=$NOW
+IFS=$'\n'
+
+XEIT=0
+
+while (($# > 0)); do
+	if [ "x$1" == "xterminate" ]; then 
+		TERMINATE=1
+		/bin/echo "terminating expired WU" 1>&2
+	elif [ "x$1" == "xext15min" ]; then
+		NOW=$((NOW - 900))
+		/bin/echo "extending 15 mins to check expiry THEN (`date --date=@$THEN`) -> NOW (`date --date=@$NOW`)" 1>&2
+	elif [ "x$1" == "xscan60min" ]; then
+		NOW=$((NOW + 3600))
+		/bin/echo "scanning 60 mins to check expiry NOW (`date --date=@$NOW`) -> THEN (`date --date=@$THEN`)" 1>&2
+	else
+		/bin/echo "$1: option ignored" 1>&2
+	fi
+	shift
+done
+
+
+CC=0
+for i in `/usr/bin/boinccmd --get_tasks | /bin/grep -e "   name:" -e "project URL:" -e "report deadline:"`; do 
+	unset TERM_CMD
+	[ ${i:3:2} == "na" ] && NA=$i
+	[ ${i:3:2} == "pr" ] && URL=$i
+	[ ${i:3:2} == "re" ] && DT2=`/bin/echo $i| /usr/bin/cut -d" " -f 6-` && DT=`/bin/date -d "$DT2" +%s` && CC=$((CC + 1)) && \
+		echo -n "." 1>&2
+
+	[ "x$NA" != "x" -a "x$URL" != "x" -a "x$DT" != "x" ] && [ $NOW -ge $DT ] && \
+		NA=`/bin/echo $NA| /usr/bin/cut -d" " -f 5` && \
+		URL=`/bin/echo $URL| /usr/bin/cut -d" " -f 6` && \
+		TERM_CMD="/usr/bin/boinccmd --task $URL $NA abort" && TERM_MSG="WU $NA terminated..." && \
+		/bin/echo "[ $NOW > $DT ] $TERM_CMD" && \
+		unset NA && \
+		unset URL && \
+		unset DT
+
+	[ "x$TERMINATE" != "x" -a  "x$TERM_CMD" != "x" ] && eval $TERM_CMD && XEIT=1 && /bin/echo $TERM_MSG
+done
+
+/bin/echo 1>&2
+/bin/echo "$CC tasks scanned" 1>&2
+
+exit $XEIT

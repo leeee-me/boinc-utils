@@ -1,0 +1,201 @@
+#!/bin/bash
+
+cd $HOME/rrd
+
+for url in $(boinccmd --get_project_status | sed -n 's/\s*master URL: //p'); do
+  boinccmd --project ${url} update;
+done
+
+declare -A myArray
+
+myArray=(\
+['milkyway.cs.rpi.edu/milkyway/']='crmilkyway' \
+['einstein.phys.uwm.edu/']='creinstein' \
+['boinc.bakerlab.org/rosetta/']='crrosetta' \
+['lhcathome.cern.ch/lhcathome/']='crlhc' \
+['www.worldcommunitygrid.org/']='crwcg')
+
+D=`boinccmd --get_project_status | grep -e "host_total_credit:" -e "master URL:" | awk '{print $2 $3}' | sed -e 's/URL:[^:]*:\/\///g'`
+U1=`echo $D | awk '{print $1}'`
+U2=`echo $D | awk '{print $3}'`
+U3=`echo $D | awk '{print $5}'`
+U4=`echo $D | awk '{print $7}'`
+U5=`echo $D | awk '{print $9}'`
+
+F1=${myArray[$U1]}
+F2=${myArray[$U2]}
+F3=${myArray[$U3]}
+F4=${myArray[$U4]}
+F5=${myArray[$U5]}
+
+D1=`echo $D | awk '{print int($2)}'`
+D2=`echo $D | awk '{print int($4)}'`
+D3=`echo $D | awk '{print int($6)}'`
+D4=`echo $D | awk '{print int($8)}'`
+D5=`echo $D | awk '{print int($10)}'`
+
+# create database if not exists
+[ -f boinc_host.rrd ] || {
+rrdtool create boinc_host.rrd --start now-30d --step 1h \
+   DS:creinstein:GAUGE:1d:U:U \
+   DS:crmilkyway:GAUGE:1d:U:U \
+   DS:crrosetta:GAUGE:1d:U:U \
+   DS:crlhc:GAUGE:1d:U:U \
+   DS:crwcg:GAUGE:1d:U:U \
+   RRA:LAST:0.5:1h:30d
+}
+
+[ -z "$1" ] && rrdtool update boinc_host.rrd -t $F1:$F2:$F3:$F4:$F5 N:$D1:$D2:$D3:$D4:$D5 
+#[ -z "$1" ] && rrdtool dump boinc_host.rrd | grep "<row>" | tail -n 1 | sed -e 's/<[//a-zA-Z]*>/ /g' | awk '{printf "%s %s %s / %d --> %d %d %d %d %d\n", $2, $3, $4, $6, $8, $9, $10, $11, $12}'
+#[ -z "$1" ] && rrdtool lastupdate boinc_host.rrd | tail -n 1
+
+D=`boinccmd --get_project_status | grep -e "host_expavg_credit:" -e "master URL:" | awk '{print $2 $3}' | sed -e 's/URL:[^:]*:\/\///g'`
+U1=`echo $D | awk '{print $1}'`
+U2=`echo $D | awk '{print $3}'`
+U3=`echo $D | awk '{print $5}'`
+U4=`echo $D | awk '{print $7}'`
+U5=`echo $D | awk '{print $9}'`
+
+F1=${myArray[$U1]}
+F2=${myArray[$U2]}
+F3=${myArray[$U3]}
+F4=${myArray[$U4]}
+F5=${myArray[$U5]}
+
+D1=`echo $D | awk '{print int($2)}'`
+D2=`echo $D | awk '{print int($4)}'`
+D3=`echo $D | awk '{print int($6)}'`
+D4=`echo $D | awk '{print int($8)}'`
+D5=`echo $D | awk '{print int($10)}'`
+
+cd $HOME/rrd
+
+[ -f boinc_avg_host.rrd ] || {
+rrdtool create boinc_avg_host.rrd --start now-30d --step 1h \
+   DS:creinstein:GAUGE:1d:U:U \
+   DS:crmilkyway:GAUGE:1d:U:U \
+   DS:crrosetta:GAUGE:1d:U:U \
+   DS:crlhc:GAUGE:1d:U:U \
+   DS:crwcg:GAUGE:1d:U:U \
+   RRA:LAST:0.5:1h:30d
+}
+
+[ -z "$1" ] && rrdtool update boinc_avg_host.rrd -t $F1:$F2:$F3:$F4:$F5 N:$D1:$D2:$D3:$D4:$D5
+#[ -z "$1" ] && rrdtool dump boinc_avg_host.rrd | grep "<row>" | tail -n 1 | sed -e 's/<[//a-zA-Z]*>/ /g' | awk '{printf "%s %s %s / %d --> %d %d %d %d %d\n", $2, $3, $4, $6, $8, $9, $10, $11, $12}'
+#[ -z "$1" ] && rrdtool lastupdate boinc_avg_host.rrd | tail -n 1
+
+P=`boinccmd --get_project_status | grep "master URL:" | awk '{ print $3 }' | paste -sd " " -`
+D=`boinccmd --get_tasks | grep -e proj|word_counter $P|sed -e 's/https\{0,\}:\/\///g'`
+U1=`echo $D | awk '{print $1}'`
+U2=`echo $D | awk '{print $3}'`
+U3=`echo $D | awk '{print $5}'`
+U4=`echo $D | awk '{print $7}'`
+U5=`echo $D | awk '{print $9}'`
+
+F1=${myArray[$U1]}
+F2=${myArray[$U2]}
+F3=${myArray[$U3]}
+F4=${myArray[$U4]}
+F5=${myArray[$U5]}
+
+D1=`echo $D | awk '{print int($2)}'`
+D2=`echo $D | awk '{print int($4)}'`
+D3=`echo $D | awk '{print int($6)}'`
+D4=`echo $D | awk '{print int($8)}'`
+D5=`echo $D | awk '{print int($10)}'`
+
+cd $HOME/rrd
+
+[ -f boinc_tasks_host.rrd ] || {
+rrdtool create boinc_tasks_host.rrd --start now-30d --step 1h \
+   DS:creinstein:GAUGE:1d:U:U \
+   DS:crmilkyway:GAUGE:1d:U:U \
+   DS:crrosetta:GAUGE:1d:U:U \
+   DS:crlhc:GAUGE:1d:U:U \
+   DS:crwcg:GAUGE:1d:U:U \
+   RRA:LAST:0.5:1h:30d
+}
+
+[ -z "$1" ] && rrdtool update boinc_tasks_host.rrd -t $F1:$F2:$F3:$F4:$F5 N:$D1:$D2:$D3:$D4:$D5
+#[ -z "$1" ] && rrdtool dump boinc_tasks_host.rrd | grep "<row>" | tail -n 1 | sed -e 's/<[//a-zA-Z]*>/ /g' | awk '{printf "%s %s %s / %d --> %d %d %d %d %d\n", $2, $3, $4, $6, $8, $9, $10, $11, $12}'
+#[ -z "$1" ] && rrdtool lastupdate boinc_tasks_host.rrd | tail -n 1
+
+[ -z "$1" ] && exit 0
+
+DDD=`date +"%FT%R%:z %Z"`
+
+rrdtool graph \
+--width 800 -l -500 \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Host Total $DDD" \
+-v "Credits" \
+--alt-y-grid \
+boinc_host.png \
+DEF:crr=boinc_host.rrd:crrosetta:LAST \
+DEF:crm=boinc_host.rrd:crmilkyway:LAST \
+DEF:cre=boinc_host.rrd:creinstein:LAST \
+DEF:crl=boinc_host.rrd:crlhc:LAST \
+DEF:crw=boinc_host.rrd:crwcg:LAST \
+LINE2:crl#e90505:"LHC" \
+LINE2:crr#ea8f00:"Rosetta" \
+LINE2:cre#eacc00:"Einstein" \
+LINE2:crm#00FF00:"MilkyWay" \
+LINE2:crw#0000FF:"WCG" \
+GPRINT:crl:LAST:"L\: %0.0lf" \
+GPRINT:crr:LAST:"R\: %0.0lf" \
+GPRINT:cre:LAST:"E\: %0.0lf" \
+GPRINT:crm:LAST:"M\: %0.0lf" \
+GPRINT:crw:LAST:"W\: %0.0lf\t" \
+2>&1 > /dev/null
+
+rrdtool graph \
+--width 800 -l -5 -r \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Host Average $DDD" \
+-v "Credits" \
+--alt-y-grid \
+boinc_avg_host.png \
+DEF:crl=boinc_avg_host.rrd:crlhc:LAST \
+DEF:crr=boinc_avg_host.rrd:crrosetta:LAST \
+DEF:crm=boinc_avg_host.rrd:crmilkyway:LAST \
+DEF:cre=boinc_avg_host.rrd:creinstein:LAST \
+DEF:crw=boinc_avg_host.rrd:crwcg:LAST \
+AREA:crl#e90505:"LHC":STACK \
+AREA:crr#ea8f00:"Rosetta":STACK \
+AREA:cre#eacc00:"Einstein":STACK \
+AREA:crm#00FF00:"MilkyWay":STACK \
+AREA:crw#0000FF:"WCG":STACK \
+GPRINT:crl:LAST:"L\: %0.0lf" \
+GPRINT:crr:LAST:"R\: %0.0lf" \
+GPRINT:cre:LAST:"E\: %0.0lf" \
+GPRINT:crm:LAST:"M\: %0.0lf" \
+GPRINT:crw:LAST:"W\: %0.0lf\t" \
+2>&1 > /dev/null
+
+rrdtool graph \
+--width 800 -l -10 -r \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Host Tasks $DDD" \
+-v "Tasks" \
+--alt-y-grid \
+boinc_tasks_host.png \
+DEF:crr=boinc_tasks_host.rrd:crrosetta:LAST \
+DEF:crm=boinc_tasks_host.rrd:crmilkyway:LAST \
+DEF:cre=boinc_tasks_host.rrd:creinstein:LAST \
+DEF:crl=boinc_tasks_host.rrd:crlhc:LAST \
+DEF:crw=boinc_tasks_host.rrd:crwcg:LAST \
+LINE2:crl#e90505:"LHC" \
+LINE2:crr#ea8f00:"Rosetta" \
+LINE2:cre#eacc00:"Einstein" \
+LINE2:crm#00FF00:"MilkyWay" \
+LINE2:crw#0000FF:"WCG" \
+GPRINT:crl:LAST:"L\: %0.0lf" \
+GPRINT:crr:LAST:"R\: %0.0lf" \
+GPRINT:cre:LAST:"E\: %0.0lf" \
+GPRINT:crm:LAST:"M\: %0.0lf" \
+GPRINT:crw:LAST:"W\: %0.0lf\t" \
+2>&1 > /dev/null
+

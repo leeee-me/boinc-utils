@@ -1,0 +1,478 @@
+#!/bin/bash
+
+export PATH=$PATH:$HOME/bin
+
+colour_support=true
+/usr/bin/tput sgr0 >/dev/null 2>&1 || colour_support=false
+/usr/bin/tput setaf 2 >/dev/null 2>&1 || colour_support=false
+
+[ -z $USER ] && colour_support=false
+
+RECURSIVE=
+ADD15M=0
+
+while (($# > 0)); do
+	if [ "x$1" == "xshort" ]; then 
+		SHORT=1
+	elif [ "x$1" == "xreceived" ]; then
+		RECEIVED=1
+	elif [ "x$1" == "xadd15min" ]; then
+		ADD15M=1
+	elif [ "x$1" == "xactive" ]; then
+		ACTIVE=1
+	elif [ "x$1" == "xrecursive" ]; then
+		RECURSIVE=1
+	elif [ "x$1" == "xnocolor" ]; then
+		colour_support=false
+	elif [ "x$1" == "x-" ]; then
+		RECURSIVE=1
+		SHORT=
+		RECEIVED=
+		ADD15M=
+		ACTIVE=
+		break
+	else
+		/bin/echo "$1: option ignored" 1>&2
+	fi
+	shift
+done
+
+if [ -z $RECURSIVE ]; then
+	if [ -f $HOME/.boinc_wu_sort ]; then
+		$0 recursive `cat $HOME/.boinc_wu_sort`
+		exit 0
+	fi
+fi
+
+if $colour_support; then
+	RED=$(/usr/bin/tput setaf 1)
+	GREEN=$(/usr/bin/tput setaf 2)
+	YELLOW=$(/usr/bin/tput setaf 3)
+	BLUE=$(/usr/bin/tput setaf 4)
+	MAGENTA=$(/usr/bin/tput setaf 5)
+	CYAN=$(/usr/bin/tput setaf 6)
+	WHITE=$(/usr/bin/tput setaf 7)
+	CLEAR=$(/usr/bin/tput sgr0)
+	/usr/bin/tput sgr0
+else
+	RED=""
+	GREEN=""
+	YELLOW=""
+	BLUE=""
+	MAGENTA=""
+	CYAN=""
+	WHITE=""
+	CLEAR=""
+fi
+
+IFS=$'\n'
+
+declare -A myArray
+
+myArray=(\
+['milkyway.cs.rpi.edu/milkyway/']='MilkyWay@home' \
+['einstein.phys.uwm.edu/']='Einstein@Home' \
+['boinc.bakerlab.org/rosetta/']='Rosetta@home' \
+['setiathome.berkeley.edu/']='SETI@home' \
+['lhcathome.cern.ch/lhcathome/']='LHC@home' \
+['www.worldcommunitygrid.org/']='WCG')
+
+declare -A myShortArray
+
+myShortArray=(\
+['milkyway.cs.rpi.edu/milkyway/']='M@h' \
+['einstein.phys.uwm.edu/']='E@H' \
+['boinc.bakerlab.org/rosetta/']='R@h' \
+['setiathome.berkeley.edu/']='SETI@h' \
+['lhcathome.cern.ch/lhcathome/']='LHC@h' \
+['www.worldcommunitygrid.org/']='WCG')
+
+declare -A updownLoaded
+updownLoaded=(\
+['downloaded']='.' \
+['downloading']='d' \
+['uploading']='^' \
+['uploaded']='U')
+
+declare -A reportYesNo
+reportYesNo=(\
+['yes']='R' \
+['no']='.')
+
+declare -A tskIndex
+declare -A tskName
+declare -A tskNameShort
+declare -A tskProject
+declare -A tskActState
+declare -A tskScheduler
+declare -A tskCPUs
+declare -A tskFractionDone
+declare -A tskDeadLine
+declare -A tskDeadLineUTC
+declare -A tskReceived
+declare -A tskReceivedUTC
+declare -A tskULDLState
+declare -A tskReportState
+declare -A sortedTskID
+declare -A tskAppCount
+declare -A tskAppVer
+
+#DD=`/bin/date +"%D %T" -d "3 day"`
+DD=`/bin/date +"%D %T"`
+NOW=`/bin/date +"%D %T %:z %Z" -d "$DD"`
+NOW_UTC=`/bin/date +%s -d "$DD"`
+THEN_UTC=$NOW_UTC
+[ "x$ADD15M" == "x1" ] && NOW_UTC=$((NOW_UTC - 900))
+BOINCTASKS=/tmp/boinctasks.$$
+BOINCPROJECTS=/tmp/boincprojects.$$
+BOINCCOLLECT=/tmp/boinctasks-collect.$$
+BOINCWUSORT=/tmp/boinc_wu_sort.$$
+
+/usr/bin/boinccmd --get_tasks > $BOINCTASKS
+/usr/bin/boinccmd --get_project_status > $BOINCPROJECTS
+
+noTasks=
+
+function addEntry {
+	NA=`/bin/echo $NA| /usr/bin/cut -d' ' -f 5`
+	SNA=$NA
+	[ "x$SHORT" == "x1" -a ${#NA} -gt 35 ] && SNA="${NA:0:35}..."
+	URL=`/bin/echo $URL| /usr/bin/cut -d' ' -f 6`
+	DDL=`/bin/echo $DDL| /usr/bin/cut -d' ' -f 6-`
+	ST=`/bin/echo $ST| /usr/bin/cut -d' ' -f 5`
+	SC=`/bin/echo $SC| /usr/bin/cut -d' ' -f 6`
+	[ "x$FR" != "x" ] && FR=`/bin/echo $FR| /usr/bin/cut -d' ' -f 6`
+	[ "x$FR" != "x" ] && FR=`/usr/bin/bc <<< "$FR * 100"` && FR=`/usr/bin/printf "%5.2f%%" $FR`
+	[ "x$FR" == "x" ] && FR="  .   "
+	CPU2=$CPU
+	/bin/grep -q "GPU" <<< $CPU && CPU="G+"
+	/bin/grep -q -e "AMD" -e "ATI" <<< $CPU2 && CPU="g+"
+	CPU=`/bin/echo $CPU| /usr/bin/cut -d' ' -f 5`
+	#[ "x${CPU:0:1}" == "x0" ] && CPU="G+"
+	RCV=`/bin/echo $RCV| /usr/bin/cut -d' ' -f 5-`
+	APP=`/bin/echo $APP| /usr/bin/cut -d' ' -f 7-`
+
+	tskIndex[$LLID]=$LLID
+	tskName[$LLID]=$NA
+	tskNameShort[$LLID]=$SNA
+	UU=`/bin/echo $URL | /bin/sed -e 's/[^:]*:\/\///g'`
+	tskProject[$LLID]=${myArray[$UU]}
+	shortPrj=${myShortArray[$UU]}
+	tskAppCount["$shortPrj v$APP"]=$((tskAppCount["$shortPrj v$APP"]+1))
+	tskAppVer[$LLID]=$APP
+	tskActState[$LLID]=$ST
+	tskScheduler[$LLID]=$SC
+	UU=`/bin/date +%D_%T --date="$DDL"`
+	tskDeadLine[$LLID]=$UU
+	DT=`/bin/date -d "$DDL" +%s`
+	tskDeadLineUTC[$LLID]=$DT
+	UU=`/bin/date +%D_%T --date="$RCV"`
+	tskReceived[$LLID]=$UU
+	DT=`/bin/date -d "$RCV" +%s`
+	tskReceivedUTC[$LLID]=$DT
+	tskFractionDone[$LLID]=$FR
+	tskCPUs[$LLID]=$CPU
+
+	ULDL=`/bin/echo $ULDL | /usr/bin/cut -d' ' -f 5`
+	UU=${updownLoaded[$ULDL]}
+	[ "x$UU" != "x" ] && tskULDLState[$LLID]=$UU
+	#[ "x$UU" == "x" ] && tskULDLState[$LLID]='x'
+	[ "x$UU" == "x" ] && tskULDLState[$LLID]=$ULDL
+	RPT=`/bin/echo $RPT | /usr/bin/cut -d' ' -f 7`
+	tskReportState[$LLID]=${reportYesNo[$RPT]}
+
+}
+
+/bin/cat $BOINCTASKS | /bin/grep -e "------" -e "   name:" -e "project URL:" -e "report deadline:" -e "active_task_state:" -e "scheduler state:" -e "fraction done:" -e "resources:" -e "   state:" -e "ready to report:" -e "received:" -e "app version num:" > $BOINCCOLLECT
+
+CC=0
+for i in `/bin/cat $BOINCCOLLECT`; do 
+	[ ${i:5:2} == "--" ] && LLID=`echo $ID | /bin/sed -e 's/[^0-9]\{1,\}//g'` && ID=$i
+	[ ${i:3:2} == "na" ] && NA=$i
+	[ ${i:3:2} == "pr" ] && URL=$i
+	[ ${i:3:3} == "rep" ] && DDL=$i
+	[ ${i:3:2} == "ac" ] && ST=$i
+	[ ${i:3:2} == "sc" ] && SC=$i
+	[ ${i:3:2} == "fr" ] && FR=$i
+	[ ${i:3:3} == "res" ] && CPU=$i
+	[ ${i:3:2} == "st" ] && ULDL=$i
+	[ ${i:3:3} == "rea" ] && RPT=$i
+	[ ${i:3:3} == "rec" ] && RCV=$i
+	[ ${i:3:3} == "app" ] && APP=$i
+
+	if [ ${i:5:2} == "--" ]; then
+		if [ "x$NA" != "x" -a "x$URL" != "x" -a "x$DDL" != "x" -a "x$ST" != "x" -a "x$CPU" != "x" -a "x$ULDL" != "x" -a "x$RPT" != "x" -a "x$RCV" != "x" -a "x$APP" != "x" ]; then
+			if [ -z "$ACTIVE" ]; then
+				addEntry
+			elif [ ! -z "$FR" ]; then
+				addEntry
+			fi
+			echo -n "." 1>&2
+			CC=$((CC+1))
+
+			unset NA 
+			unset URL
+			unset DT
+			unset ST
+			unset SC
+			unset FR
+			unset CPU
+			unset ULDL
+			unset RPT
+			unset RCV
+			unset APP
+		fi
+	fi
+done
+
+if [ "x$ID" != "x" -a "x$NA" != "x" -a "x$URL" != "x" -a "x$DDL" != "x" -a "x$ST" != "x" -a "x$CPU" != "x" -a "x$ULDL" != "x" -a "x$RPT" != "x" -a "x$APP" != "x" ]; then
+	LLID=`echo $ID | /bin/sed -e 's/[^0-9]\{1,\}//g'` 
+	if [ -z "$ACTIVE" ]; then
+		addEntry
+	elif [ ! -z "$FR" ]; then
+		addEntry
+	fi
+	echo -n "." 1>&2
+	CC=$((CC+1))
+fi
+
+/bin/echo 1>&2
+/bin/echo "$CC tasks scanned" 1>&2
+
+/bin/rm $BOINCCOLLECT
+
+[ $CC -eq 0 ] && noTasks=1
+
+if [ -z "$noTasks" ]; then
+	
+	for k in "${!tskDeadLineUTC[@]}"; do
+		if [ "x$RECEIVED" == "x" ]; then
+	#		/bin/echo $k" - "${tskDeadLineUTC[$k]}" - "${tskName[$k]}
+			/bin/echo $k" - "${tskDeadLineUTC[$k]}
+		else
+	#		/bin/echo $k" - "${tskReceivedUTC[$k]}" - "${tskName[$k]}
+			/bin/echo $k" - "${tskReceivedUTC[$k]}
+		fi
+	done | 
+	/usr/bin/sort -n -t"-" -k2b,2 -k1g,1 > $BOINCWUSORT
+	#/usr/bin/sort -n -k3,5d > $BOINCWUSORT
+
+	CC=1
+	for i in `/bin/cat $BOINCWUSORT`; do
+		k=`/bin/echo $i | /usr/bin/cut -d' ' -f 1`
+		sortedTskID+=([$CC]=$k)
+		CC=$((CC + 1))
+	done
+	/bin/rm $BOINCWUSORT
+
+	/bin/echo -n $CLEAR
+
+	F1="    "
+	F2="              "
+	F3="                  "
+	F4="              "
+	F5="    "
+	F6="  "
+	F7="      "
+	F8="U"
+	F9="R"
+	/usr/bin/printf "%4s %-14s %-18s %-14s %-4s %-2s %-7s%s%s\n" $F1 $F2 $F3 $F4 $F5 $F6 $F7 $F8 $F9
+
+	F1=" ID#"
+	F2="Project       "
+	if [ "x$RECEIVED" == "x" ]; then
+		F3="Deadline          "
+	else
+		F3="Received          "
+	fi
+	F4="Active        "
+	F5="Sche"
+	F6="uP"
+	F7="Comp%"
+	F8="D"
+	F9="p"
+	F10="App Ver/Task Name   "
+	/usr/bin/printf "%4s %-14s %-18s %-14s %-4s %-2s %-7s%s%s %s\n" $F1 $F2 $F3 $F4 $F5 $F6 $F7 $F8 $F9 $F10
+
+	F1="----"
+	F2="--------------"
+	F3="------------------"
+	F4="--------------"
+	F5="----"
+	F6="--"
+	F7="------"
+	F8="-"
+	F9="-"
+	F10="===================="
+	/usr/bin/printf "%4s %-14s %-18s %-14s %-4s %-2s %-7s%s%s %s\n" $F1 $F2 $F3 $F4 $F5 $F6 $F7 $F8 $F9 $F10
+
+	CC=1
+	for k in "${!sortedTskID[@]}"; do
+		ID=${sortedTskID[$CC]}
+		DT=${tskDeadLineUTC[$ID]}
+		if [ "x$RECEIVED" == "x" ]; then
+			SHOWTIME=${tskDeadLine[$ID]}
+		else
+			SHOWTIME=${tskReceived[$ID]}
+		fi
+		if [ "x$SHORT" == "x" ]; then
+			TASKNAME=${tskName[$ID]}
+		else
+			TASKNAME=${tskNameShort[$ID]}
+		fi
+
+		if [ $NOW_UTC -lt $DT ]; then
+			if $colour_support; then
+				/usr/bin/printf "%s%3d)%s %-14s%s %-18s%s %-14s%s %-4s%s %-2s%s %-7s%s%s%s %sv%s %s%s\n"\
+				${WHITE} $ID\
+				${WHITE} ${tskProject[$ID]}\
+				${YELLOW} ${SHOWTIME}\
+				${WHITE} ${tskActState[$ID]}\
+				${RED} ${tskScheduler[$ID]:0:4}\
+				${WHITE} ${tskCPUs[$ID]}\
+				${GREEN} ${tskFractionDone[$ID]}\
+				${YELLOW} ${tskULDLState[$ID]} ${tskReportState[$ID]}\
+				${GREEN} ${tskAppVer[$ID]}\
+				${BLUE} ${TASKNAME}
+			else
+				/usr/bin/printf "%3d) %-14s %-18s %-14s %-4s %-2s %-7s%s%s v%s %s\n"\
+				$ID\
+				${tskProject[$ID]}\
+				${SHOWTIME}\
+				${tskActState[$ID]}\
+				${tskScheduler[$ID]:0:4}\
+				${tskCPUs[$ID]}\
+				${tskFractionDone[$ID]}\
+				${tskULDLState[$ID]} \
+				${tskReportState[$ID]}\
+				${tskAppVer[$ID]}\
+				${TASKNAME}
+			fi
+		else
+			if $colour_support; then
+				/usr/bin/printf "%s%3d)%s*%-14s%s %-17s*%s %-14s%s %-4s%s %-2s%s %-7s%s%s%s %sv%s %s%s\n"\
+				${CYAN} $ID\
+				${CYAN} ${tskProject[$ID]}\
+				${CYAN} ${SHOWTIME}\
+				${MAGENTA} ${tskActState[$ID]}\
+				${MAGENTA} ${tskScheduler[$ID]:0:4}\
+				${MAGENTA} ${tskCPUs[$ID]}\
+				${MAGENTA} ${tskFractionDone[$ID]}\
+				${MAGENTA} ${tskULDLState[$ID]} ${tskReportState[$ID]}\
+				${CYAN} ${tskAppVer[$ID]}\
+				${CYAN} ${TASKNAME}
+			else
+				/usr/bin/printf "%3d)*%-14s %-17s* %-14s %-4s %-2s %-7s%s%s v%s %s\n"\
+				$ID\
+				${tskProject[$ID]}\
+				${SHOWTIME}\
+				${tskActState[$ID]}\
+				${tskScheduler[$ID]:0:4}\
+				${tskCPUs[$ID]}\
+				${tskFractionDone[$ID]}\
+				${tskULDLState[$ID]} \
+				${tskReportState[$ID]}\
+				${tskAppVer[$ID]}\
+				${TASKNAME}
+			fi
+		fi
+		CC=$((CC + 1))
+	done
+	/bin/echo -n $CLEAR
+
+	/bin/echo "----------------"
+	/bin/echo "Scheduler state: "${RED}"abor"${YELLOW}"ted"${WHITE}" | "${RED}"unin"${YELLOW}"itialized"${WHITE}" | "${RED}"pree"${YELLOW}"mpted"${WHITE}" | "${RED}"sche"${YELLOW}"duled"${WHITE}" "" // "" uP resources: "${RED}"1..n"${YELLOW}" CPUs"${WHITE}" | "${RED}"G+"${YELLOW}" nVidia GPU"${WHITE}" | "${RED}"g+"${YELLOW}" AMD/ATI GPU"${WHITE}" "
+
+	/bin/echo "----------------"
+	/bin/echo -n "App Ver stats:"
+	for i in ${!tskAppCount[@]}; do 
+		/bin/echo " "${RED}$i": "${YELLOW}${tskAppCount[$i]}${WHITE}" "; 
+	done | /usr/bin/sort | /usr/bin/paste -sd'|' -
+	/bin/echo
+	
+fi
+
+/bin/echo "======== Current Time ========" 
+/bin/echo -n $NOW
+[ "x$ADD15M" == "x1" ] && /bin/echo -n " (extra 15 mins expiry $THEN_UTC -> $NOW_UTC)"
+/bin/echo
+/bin/echo "-------- System started --------"
+/usr/bin/uptime -p
+/bin/echo
+
+declare -A prjAllowWorks
+
+prjAllowWorks=(\
+['MilkyWay@home']='N' \
+['Einstein@Home']='N' \
+['Rosetta@home']='N' \
+['SETI@home']='N' \
+['LHC@home']='N' \
+['WCG']='N')
+
+declare -A prjResNCredit
+prjResNCredit=(\
+['MilkyWay@home']='0' \
+['Einstein@Home']='0' \
+['Rosetta@home']='0' \
+['SETI@home']='0' \
+['LHC@home']='0' \
+['WCG']='0')
+
+T_RSHR=0
+T_USR_T=0
+T_USR_E=0
+T_HOS_T=0
+T_HOS_E=0
+
+/bin/echo "=== Total Works / Allow Works (.|!|?) / Resource Share / Credits  ==="
+for i in `/bin/cat $BOINCPROJECTS | grep -e "master URL" -e "suspended via" -e "don.t request" -e "user_total_credit:" -e "user_expavg_credit:" -e "host_total_credit:" -e "host_expavg_credit:" -e "resource share:" `; do
+	[ ${i:3:2} == "ma" ] && URL=`/bin/echo $i| /usr/bin/cut -d' ' -f 6`
+	[ ${i:3:2} == "do" ] && WRK=`/bin/echo $i| /usr/bin/cut -d' ' -f 8`
+	[ ${i:3:2} == "su" ] && SUS=`/bin/echo $i| /usr/bin/cut -d' ' -f 7`
+	[ ${i:3:2} == "re" ] && RSHR=`/bin/echo $i| /usr/bin/cut -d' ' -f 6` && RSHR=`/usr/bin/printf "%10.0f" $RSHR`
+	[ ${i:3:6} == "user_t" ] && USR_T=`/bin/echo $i| /usr/bin/cut -d' ' -f 5` && USR_T=`/usr/bin/printf "%0.0f" $USR_T`
+	[ ${i:3:6} == "user_e" ] && USR_E=`/bin/echo $i| /usr/bin/cut -d' ' -f 5` && USR_E=`/usr/bin/printf "%0.0f" $USR_E`
+	[ ${i:3:6} == "host_t" ] && HOS_T=`/bin/echo $i| /usr/bin/cut -d' ' -f 5` && HOS_T=`/usr/bin/printf "%0.0f" $HOS_T`
+	[ ${i:3:6} == "host_e" ] && HOS_E=`/bin/echo $i| /usr/bin/cut -d' ' -f 5` && HOS_E=`/usr/bin/printf "%0.0f" $HOS_E`
+
+	if [ "x$URL" != "x" -a "x$SUS" != "x" -a "x$WRK" != "x" -a "x$USR_T" != "x" -a "x$USR_E" != "x" -a "x$HOS_T" != "x"  -a "x$HOS_E" != "x" ]; then
+		UU=`/bin/echo $URL | /bin/sed -e 's/[^:]*:\/\///g'`
+		[ "x$UU" != "x" ] && LB=${myArray[$UU]}
+		if [ "x$LB" != "x" ]; then
+			[ "$WRK" == "yes" ] && prjAllowWorks[$LB]='!'
+			[ "$WRK" == "no" ] && prjAllowWorks[$LB]='.'
+			[ "$SUS" == "yes" ] && prjAllowWorks[$LB]='?'
+			prjResNCredit[$LB]=`/usr/bin/printf "%10d_%10d_%10d_%10d_%10d" $RSHR $USR_T $USR_E $HOS_T $HOS_E`
+			T_RSHR=$((T_RSHR + RSHR))
+			T_USR_T=$((T_USR_T + USR_T))
+			T_USR_E=$((T_USR_E + USR_E))
+			T_HOS_T=$((T_HOS_T + HOS_T))
+			T_HOS_E=$((T_HOS_E + HOS_E))
+		fi
+		unset UU
+		unset LB
+		unset URL
+		unset WRK
+	fi
+done
+
+/bin/echo "Project      _TtW_A_  ResShare_  UsrTotal_ UsrExpAvg_ HostTotal_HostExpAvg" | /usr/bin/column -s'_' -t
+/bin/echo "-------      _---_-_----------_----------_----------_----------_----------" | /usr/bin/column -s'_' -t
+
+PRJS=`/bin/cat $BOINCPROJECTS | /bin/grep "master URL:" | /usr/bin/cut -d' ' -f 6-  | /usr/bin/paste -sd' ' - `
+for i in `/bin/cat $BOINCTASKS | /bin/grep -e proj | word_counter $PRJS | /bin/sed -e "s/https\{0,\}:\/\///g"`; do
+	UU=`/bin/echo $i | /usr/bin/cut -d' ' -f 1`
+	VV=`/bin/echo $i | /usr/bin/cut -d' ' -f 2`
+	VV=`/usr/bin/printf "%3d" $VV`
+	LB=${myArray[$UU]}
+	LB2=`/usr/bin/printf "%-13s" $LB`
+	/bin/echo $LB2"_"$VV"_"${prjAllowWorks[$LB]}"_"${prjResNCredit[$LB]}
+done | /usr/bin/column -s'_' -t | /usr/bin/sort -r -n -k5
+
+/bin/echo "-------      _---_-_----------_----------_----------_----------_----------" | /usr/bin/column -s'_' -t
+/bin/echo "             _   _ _"`/usr/bin/printf "%10d_%10d_%10d_%10d_%10d" $T_RSHR $T_USR_T $T_USR_E $T_HOS_T $T_HOS_E` | /usr/bin/column -s'_' -t
+
+
+/bin/rm $BOINCTASKS
+/bin/rm $BOINCPROJECTS
