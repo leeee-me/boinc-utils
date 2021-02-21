@@ -72,7 +72,8 @@ for k in {1..2}; do
 				echo "Active WU changed... ${arrname[$j]} != ${i:9}" 1>&2
 				wuidx1=${arrrevnameid["${arrname[$j]}"]}
 				wuidx2=${arrrevnameid["${i:9}"]}
-				echo ">>> Index $wuidx1 != Index $wuidx2 ..." 1>&2
+				[ -z "$wuidx2" ] && wuidx2=$j
+				echo ">>> Index before of $((wuidx1+1)) != Index after of $((wuidx2+1)) ..." 1>&2
 				echo ">>> Abort now..."  1>&2
 				exit 255
 			fi
