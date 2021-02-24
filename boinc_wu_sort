@@ -89,10 +89,12 @@ myShortArray=(\
 
 declare -A updownLoaded
 updownLoaded=(\
+['aborting']='A' \
+['aborted']='!'
+['downloading']='D' \
 ['downloaded']='.' \
-['downloading']='d' \
-['uploading']='^' \
-['uploaded']='U')
+['uploading']='U' \
+['uploaded']='^')
 
 declare -A reportYesNo
 reportYesNo=(\
@@ -175,9 +177,9 @@ function addEntry {
 
 	ULDL=`/bin/echo $ULDL | /usr/bin/cut -d' ' -f 5`
 	UU=${updownLoaded[$ULDL]}
-	[ "x$UU" != "x" ] && tskULDLState[$LLID]=$UU
-	#[ "x$UU" == "x" ] && tskULDLState[$LLID]='x'
-	[ "x$UU" == "x" ] && tskULDLState[$LLID]=$ULDL
+	[ "z$UU" != "z" ] && tskULDLState[$LLID]=$UU
+	#[ "z$UU" == "z" ] && tskULDLState[$LLID]='?'
+	[ "z$UU" == "z" ] && tskULDLState[$LLID]=$ULDL
 	RPT=`/bin/echo $RPT | /usr/bin/cut -d' ' -f 7`
 	tskReportState[$LLID]=${reportYesNo[$RPT]}
 
