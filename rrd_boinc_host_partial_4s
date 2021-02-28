@@ -165,14 +165,14 @@ DEF:crr=boinc_host.rrd:`echo $F1`:LAST \
 DEF:crm=boinc_host.rrd:`echo $F2`:LAST \
 DEF:crw=boinc_host.rrd:`echo $F3`:LAST \
 DEF:crl=boinc_host.rrd:`echo $F4`:LAST \
-LINE2:crr#e90505:"`echo $L1`" \
-LINE2:crm#eacc00:"`echo $L2`" \
-LINE2:crw#ea8f00:"`echo $L3`" \
-LINE2:crl#FF0000:"`echo $L4`" \
-GPRINT:crr:LAST:"`echo $LA1`\: %0.0lf" \
-GPRINT:crm:LAST:"`echo $LA2`\: %0.0lf\t" \
-GPRINT:crw:LAST:"`echo $LA3`\: %0.0lf\t" \
-GPRINT:crl:LAST:"`echo $LA4`\: %0.0lf\t" \
+LINE2:crr#e90505:"`echo $L1` " \
+LINE2:crm#eacc00:"`echo $L2` " \
+LINE2:crw#ea8f00:"`echo $L3` " \
+LINE2:crl#00FF00:"`echo $L4`\t\t\t" \
+GPRINT:crr:LAST:"`echo $LA1`\: %0.0lf " \
+GPRINT:crm:LAST:"`echo $LA2`\: %0.0lf " \
+GPRINT:crw:LAST:"`echo $LA3`\: %0.0lf " \
+GPRINT:crl:LAST:"`echo $LA4`\: %0.0lf\r" \
 2>&1 > /dev/null
 
 rrdtool graph \
@@ -187,14 +187,14 @@ DEF:crr=boinc_avg_host.rrd:`echo $F1`:LAST \
 DEF:crm=boinc_avg_host.rrd:`echo $F2`:LAST \
 DEF:crw=boinc_avg_host.rrd:`echo $F3`:LAST \
 DEF:crl=boinc_avg_host.rrd:`echo $F4`:LAST \
-AREA:crr#e90505:"`echo $L1`":STACK \
-AREA:crm#eacc00:"`echo $L2`":STACK \
-AREA:crw#ea8f00:"`echo $L3`":STACK \
-AREA:crl#FF0000:"`echo $L4`":STACK \
-GPRINT:crr:LAST:"`echo $LA1`\: %0.0lf" \
-GPRINT:crm:LAST:"`echo $LA2`\: %0.0lf\t" \
-GPRINT:crw:LAST:"`echo $LA3`\: %0.0lf\t" \
-GPRINT:crl:LAST:"`echo $LA4`\: %0.0lf\t" \
+AREA:crr#e90505:"`echo $L1` ":STACK \
+AREA:crm#eacc00:"`echo $L2` ":STACK \
+AREA:crw#ea8f00:"`echo $L3` ":STACK \
+AREA:crl#00FF00:"`echo $L4`\t\t\t":STACK \
+GPRINT:crr:LAST:"`echo $LA1`\: %0.0lf " \
+GPRINT:crm:LAST:"`echo $LA2`\: %0.0lf " \
+GPRINT:crw:LAST:"`echo $LA3`\: %0.0lf " \
+GPRINT:crl:LAST:"`echo $LA4`\: %0.0lf\r" \
 2>&1 > /dev/null
 
 TL1=${myLblArray[$TF1]}
@@ -222,10 +222,10 @@ DEF:crl=boinc_tasks_host.rrd:`echo $TF4`:LAST \
 LINE2:crr#e90505:"`echo $TL1`" \
 LINE2:crm#eacc00:"`echo $TL2`" \
 LINE2:crw#ea8f00:"`echo $TL3`" \
-LINE2:crl#FF0000:"`echo $TL4`" \
-GPRINT:crr:LAST:"`echo $TLA1`\: %0.0lf" \
-GPRINT:crm:LAST:"`echo $TLA2`\: %0.0lf\t" \
-GPRINT:crw:LAST:"`echo $TLA3`\: %0.0lf\t" \
-GPRINT:crl:LAST:"`echo $TLA4`\: %0.0lf\t" \
+LINE2:crl#00FF00:"`echo $TL4`\t\t\t\t" \
+GPRINT:crr:LAST:"`echo $TLA1`\: %0.0lf " \
+GPRINT:crm:LAST:"`echo $TLA2`\: %0.0lf " \
+GPRINT:crw:LAST:"`echo $TLA3`\: %0.0lf " \
+GPRINT:crl:LAST:"`echo $TLA4`\: %0.0lf\r" \
 2>&1 > /dev/null
 
