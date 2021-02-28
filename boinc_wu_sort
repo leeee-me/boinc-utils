@@ -478,6 +478,6 @@ done | /usr/bin/column -s'_' -t | /usr/bin/sort -r -n -k5
 /bin/echo "-------       _---_-_----------_----------_----------_----------_----------" | /usr/bin/column -s'_' -t
 /bin/echo "              _   _ _"`/usr/bin/printf "%10d_%10d_%10d_%10d_%10d" $T_RSHR $T_USR_T $T_USR_E $T_HOS_T $T_HOS_E` | /usr/bin/column -s'_' -t
 
-
+[ -f $HOME/.thermal_cpus ] && source $HOME/.thermal_cpus
 /bin/rm $BOINCTASKS
 /bin/rm $BOINCPROJECTS

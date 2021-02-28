@@ -1,0 +1,224 @@
+#!/bin/bash
+
+cd $HOME/rrd
+
+for url in $(boinccmd --get_project_status | sed -n 's/\s*master URL: //p'); do
+  boinccmd --project ${url} update;
+done
+
+declare -A myArray
+
+myArray=(\
+['milkyway.cs.rpi.edu/milkyway/']='crmilkyway' \
+['einstein.phys.uwm.edu/']='creinstein' \
+['boinc.bakerlab.org/rosetta/']='crrosetta' \
+['setiathome.berkeley.edu/']='crseti' \
+['lhcathome.cern.ch/lhcathome/']='crlhc' \
+['minecraftathome.com/minecrafthome/']='crminecraft' \
+['www.worldcommunitygrid.org/']='crwcg')
+
+D=`boinccmd --get_project_status | grep -e "user_total_credit:" -e "master URL:" | awk '{print $2 $3}' | sed -e 's/URL:[^:]*:\/\///g'`
+U1=`echo $D | awk '{print $1}'`
+U2=`echo $D | awk '{print $3}'`
+U3=`echo $D | awk '{print $5}'`
+U4=`echo $D | awk '{print $7}'`
+U5=`echo $D | awk '{print $9}'`
+U6=`echo $D | awk '{print $11}'`
+U7=`echo $D | awk '{print $13}'`
+
+F1=${myArray[$U1]}
+F2=${myArray[$U2]}
+F3=${myArray[$U3]}
+F4=${myArray[$U4]}
+F5=${myArray[$U5]}
+F6=${myArray[$U6]}
+F7=${myArray[$U7]}
+
+D1=`echo $D | awk '{print int($2)}'`
+D2=`echo $D | awk '{print int($4)}'`
+D3=`echo $D | awk '{print int($6)}'`
+D4=`echo $D | awk '{print int($8)}'`
+D5=`echo $D | awk '{print int($10)}'`
+D6=`echo $D | awk '{print int($12)}'`
+D7=`echo $D | awk '{print int($14)}'`
+
+# create database if not exists
+[ -f boinc.rrd ] || {
+rrdtool create boinc.rrd --start now-30d --step 1h \
+   DS:creinstein:GAUGE:1d:U:U \
+   DS:crmilkyway:GAUGE:1d:U:U \
+   DS:crrosetta:GAUGE:1d:U:U \
+   DS:crseti:GAUGE:1d:U:U \
+   DS:crlhc:GAUGE:1d:U:U \
+   DS:crwcg:GAUGE:1d:U:U \
+   DS:crminecraft:GAUGE:1d:U:U \
+   RRA:LAST:0.5:1h:30d
+}
+
+[ -z "$1" ] && rrdtool update boinc.rrd -t $F1:$F2:$F3:$F4:$F5:$F6:$F7 N:$D1:$D2:$D3:$D4:$D5:$D6:$D7
+
+D=`boinccmd --get_project_status | grep -e "user_expavg_credit:" -e "master URL:" | awk '{print $2 $3}' | sed -e 's/URL:[^:]*:\/\///g'`
+U1=`echo $D | awk '{print $1}'`
+U2=`echo $D | awk '{print $3}'`
+U3=`echo $D | awk '{print $5}'`
+U4=`echo $D | awk '{print $7}'`
+U5=`echo $D | awk '{print $9}'`
+U6=`echo $D | awk '{print $11}'`
+U7=`echo $D | awk '{print $13}'`
+
+F1=${myArray[$U1]}
+F2=${myArray[$U2]}
+F3=${myArray[$U3]}
+F4=${myArray[$U4]}
+F5=${myArray[$U5]}
+F6=${myArray[$U6]}
+F7=${myArray[$U7]}
+
+D1=`echo $D | awk '{print int($2)}'`
+D2=`echo $D | awk '{print int($4)}'`
+D3=`echo $D | awk '{print int($6)}'`
+D4=`echo $D | awk '{print int($8)}'`
+D5=`echo $D | awk '{print int($10)}'`
+D6=`echo $D | awk '{print int($12)}'`
+D7=`echo $D | awk '{print int($14)}'`
+
+cd $HOME/rrd
+
+[ -f boinc_avg.rrd ] || {
+rrdtool create boinc_avg.rrd --start now-30d --step 1h \
+   DS:creinstein:GAUGE:1d:U:U \
+   DS:crmilkyway:GAUGE:1d:U:U \
+   DS:crrosetta:GAUGE:1d:U:U \
+   DS:crseti:GAUGE:1d:U:U \
+   DS:crlhc:GAUGE:1d:U:U \
+   DS:crwcg:GAUGE:1d:U:U \
+   DS:crminecraft:GAUGE:1d:U:U \
+   RRA:LAST:0.5:1h:30d
+}
+
+[ -z "$1" ] && rrdtool update boinc_avg.rrd -t $F1:$F2:$F3:$F4:$F5:$F6:$F7 N:$D1:$D2:$D3:$D4:$D5:$D6:$D7
+
+[ -z "$1" ] && exit 0
+
+DDD=`date +"%FT%R%:z %Z"`
+
+
+rrdtool graph \
+--width 800 -l -1000000 -r \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Total $DDD" \
+-v "Credits" \
+--alt-y-grid \
+boinc.png \
+DEF:crr=boinc.rrd:crrosetta:LAST \
+DEF:crm=boinc.rrd:crmilkyway:LAST \
+DEF:cre=boinc.rrd:creinstein:LAST \
+DEF:crs=boinc.rrd:crseti:LAST \
+DEF:crl=boinc.rrd:crlhc:LAST \
+DEF:crw=boinc.rrd:crwcg:LAST \
+DEF:crt=boinc.rrd:crminecraft:LAST \
+LINE2:crr#0000FF:"R" \
+LINE2:crm#e90505:"M" \
+LINE2:cre#00FF00:"E" \
+LINE2:crl#ea8f00:"L" \
+LINE2:crs#dddddd:"S" \
+LINE2:crw#eacc00:"W" \
+LINE2:crt#FF0000:"t" \
+GPRINT:crr:LAST:"R\: %0.0lf" \
+GPRINT:crm:LAST:"M\: %0.0lf" \
+GPRINT:cre:LAST:"E\: %0.0lf" \
+GPRINT:crl:LAST:"L\: %0.0lf" \
+GPRINT:crs:LAST:"S\: %0.0lf" \
+GPRINT:crw:LAST:"W\: %0.0lf" \
+GPRINT:crt:LAST:"t\: %0.0lf\t" \
+2>&1 > /dev/null
+
+
+rrdtool graph \
+--width 800 -l -1000 -r \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Average $DDD" \
+-v "Credits" \
+--alt-y-grid \
+boinc_avg.png \
+DEF:crr=boinc_avg.rrd:crrosetta:LAST \
+DEF:crm=boinc_avg.rrd:crmilkyway:LAST \
+DEF:cre=boinc_avg.rrd:creinstein:LAST \
+DEF:crs=boinc_avg.rrd:crseti:LAST \
+DEF:crl=boinc_avg.rrd:crlhc:LAST \
+DEF:crw=boinc_avg.rrd:crwcg:LAST \
+DEF:crt=boinc_avg.rrd:crminecraft:LAST \
+LINE2:crr#0000FF:"R" \
+LINE2:crm#e90505:"M" \
+LINE2:cre#00FF00:"E" \
+LINE2:crl#ea8f00:"L" \
+LINE2:crs#dddddd:"S" \
+LINE2:crw#eacc00:"W" \
+LINE2:crt#FF0000:"t" \
+GPRINT:crr:LAST:"R\: %0.0lf" \
+GPRINT:crm:LAST:"M\: %0.0lf" \
+GPRINT:cre:LAST:"E\: %0.0lf" \
+GPRINT:crl:LAST:"L\: %0.0lf" \
+GPRINT:crs:LAST:"S\: %0.0lf" \
+GPRINT:crw:LAST:"W\: %0.0lf" \
+GPRINT:crt:LAST:"t\: %0.0lf\t" \
+2>&1 > /dev/null
+
+
+
+rrdtool graph \
+--width 800 --height 300 -l 0 \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Total stack $DDD" \
+-v "Credits" \
+boinc-stack.png \
+DEF:crs=boinc.rrd:crseti:LAST \
+DEF:crl=boinc.rrd:crlhc:LAST \
+DEF:crr=boinc.rrd:crrosetta:LAST \
+DEF:cre=boinc.rrd:creinstein:LAST \
+DEF:crw=boinc.rrd:crwcg:LAST \
+DEF:crm=boinc.rrd:crmilkyway:LAST \
+DEF:crt=boinc.rrd:crminecraft:LAST \
+CDEF:ctot=crr,crm,cre,crs,crl,crw,crt,+,+,+,+,+,+ \
+AREA:crs#dddddd:"SETI":STACK \
+AREA:crl#e90505:"LHC":STACK \
+AREA:crr#ea8f00:"Rosetta":STACK \
+AREA:cre#eacc00:"Einstein":STACK \
+AREA:crw#00FF00:"WCG":STACK \
+AREA:crm#0000FF:"MilkyWay":STACK \
+AREA:crt#FF0000:"Minecraft":STACK \
+GPRINT:ctot:LAST:"Total\: %0.0lf\t" \
+2>&1 > /dev/null
+
+
+
+rrdtool graph \
+--width 800 --height 200 -l -1000 -r \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Average stack $DDD" \
+-v "Credits" \
+boinc_avg-stack.png \
+DEF:crs=boinc_avg.rrd:crseti:LAST \
+DEF:crl=boinc_avg.rrd:crlhc:LAST \
+DEF:crr=boinc_avg.rrd:crrosetta:LAST \
+DEF:cre=boinc_avg.rrd:creinstein:LAST \
+DEF:crw=boinc_avg.rrd:crwcg:LAST \
+DEF:crm=boinc_avg.rrd:crmilkyway:LAST \
+DEF:crt=boinc_avg.rrd:crminecraft:LAST \
+CDEF:ctot=crr,crm,cre,crs,crl,crw,crt,+,+,+,+,+,+ \
+AREA:crs#dddddd:"SETI":STACK \
+AREA:crl#e90505:"LHC":STACK \
+AREA:crr#ea8f00:"Rosetta":STACK \
+AREA:cre#eacc00:"Einstein":STACK \
+AREA:crw#00FF00:"WCG":STACK \
+AREA:crm#0000FF:"MilkyWay":STACK \
+AREA:crt#FF0000:"Minecraft":STACK \
+GPRINT:ctot:LAST:"Average\: %0.0lf\t" \
+2>&1 > /dev/null
+
+rrd_boinc_proj
+

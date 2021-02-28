@@ -123,3 +123,6 @@ for i in `boinccmd --get_simple_gui_info |  grep resources | cut -d' ' -f5-`; do
 	j=$((j+1)); 
 done
 echo -n ${CLEAR}
+
+[ -f $HOME/.thermal_cpus ] && source $HOME/.thermal_cpus
+

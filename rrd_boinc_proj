@@ -1,0 +1,189 @@
+#!/bin/bash
+
+cd $HOME/rrd
+
+declare -A myArrayUpper=(\
+['creinstein']=0 \
+['crmilkyway']=0 \
+['crrosetta']=0 \
+['crseti']=0 \
+['crlhc']=0 \
+['crminecraft']=0 \
+['crwcg']=0)
+
+declare -A myArrayLower=(\
+['creinstein']=0 \
+['crmilkyway']=0 \
+['crrosetta']=0 \
+['crseti']=0 \
+['crlhc']=0 \
+['crminecraft']=0 \
+['crwcg']=0)
+
+declare -A myArrayMargin=(\
+['creinstein']=50 \
+['crmilkyway']=100 \
+['crrosetta']=200 \
+['crseti']=100 \
+['crlhc']=100 \
+['crminecraft']=100 \
+['crwcg']=100)
+
+declare -A myArrayShift=(\
+['creinstein']=0.2 \
+['crmilkyway']=0.2 \
+['crrosetta']=0.2 \
+['crseti']=0.2 \
+['crlhc']=0.2 \
+['crminecraft']=0.2 \
+['crwcg']=0.2)
+
+
+lastMAX=`rrdtool lastupdate boinc.rrd | sed -e 's/^[0-9]*: //'`
+
+U1=`echo $lastMAX | awk '{print $1}'`
+U2=`echo $lastMAX | awk '{print $2}'`
+U3=`echo $lastMAX | awk '{print $3}'`
+U4=`echo $lastMAX | awk '{print $4}'`
+U5=`echo $lastMAX | awk '{print $5}'`
+U6=`echo $lastMAX | awk '{print $6}'`
+U7=`echo $lastMAX | awk '{print $7}'`
+
+F1=`echo $lastMAX | awk '{print int($8)}'`
+F2=`echo $lastMAX | awk '{print int($9)}'`
+F3=`echo $lastMAX | awk '{print int($10)}'`
+F4=`echo $lastMAX | awk '{print int($11)}'`
+F5=`echo $lastMAX | awk '{print int($12)}'`
+F6=`echo $lastMAX | awk '{print int($13)}'`
+F7=`echo $lastMAX | awk '{print int($14)}'`
+
+X=`echo $F1 ${myArrayMargin[$U1]} ${myArrayShift[$U1]} | awk '{ print int($1 + $3 * $1 / $2) }'`
+myArrayUpper[$U1]=$X
+X=`echo $F2 ${myArrayMargin[$U2]} ${myArrayShift[$U2]} | awk '{ print int($1 + $3 * $1 / $2) }'`
+myArrayUpper[$U2]=$X
+X=`echo $F3 ${myArrayMargin[$U3]} ${myArrayShift[$U3]} | awk '{ print int($1 + $3 * $1 / $2) }'`
+myArrayUpper[$U3]=$X
+X=`echo $F4 ${myArrayMargin[$U4]} ${myArrayShift[$U4]} | awk '{ print int($1 + $3 * $1 / $2) }'`
+myArrayUpper[$U4]=$X
+X=`echo $F5 ${myArrayMargin[$U5]} ${myArrayShift[$U5]} | awk '{ print int($1 + $3 * $1 / $2) }'`
+myArrayUpper[$U5]=$X
+X=`echo $F6 ${myArrayMargin[$U6]} ${myArrayShift[$U6]} | awk '{ print int($1 + $3 * $1 / $2) }'`
+myArrayUpper[$U6]=$X
+X=`echo $F7 ${myArrayMargin[$U7]} ${myArrayShift[$U7]} | awk '{ print int($1 + $3 * $1 / $2) }'`
+myArrayUpper[$U7]=$X
+
+X=`echo $F1 ${myArrayMargin[$U1]} ${myArrayShift[$U1]} | awk '{ print int($1 - (1 + $3) * $1 / $2) }'`
+myArrayLower[$U1]=$X
+X=`echo $F2 ${myArrayMargin[$U2]} ${myArrayShift[$U2]} | awk '{ print int($1 - (1 + $3) * $1 / $2) }'`
+myArrayLower[$U2]=$X
+X=`echo $F3 ${myArrayMargin[$U3]} ${myArrayShift[$U3]} | awk '{ print int($1 - (1 + $3) * $1 / $2) }'`
+myArrayLower[$U3]=$X
+X=`echo $F4 ${myArrayMargin[$U4]} ${myArrayShift[$U4]} | awk '{ print int($1 - (1 + $3) * $1 / $2) }'`
+myArrayLower[$U4]=$X
+X=`echo $F5 ${myArrayMargin[$U5]} ${myArrayShift[$U5]} | awk '{ print int($1 - (1 + $3) * $1 / $2) }'`
+myArrayLower[$U5]=$X
+X=`echo $F6 ${myArrayMargin[$U6]} ${myArrayShift[$U6]} | awk '{ print int($1 - (1 + $3) * $1 / $2) }'`
+myArrayLower[$U6]=$X
+X=`echo $F7 ${myArrayMargin[$U7]} ${myArrayShift[$U7]} | awk '{ print int($1 - (1 + $3) * $1 / $2) }'`
+myArrayLower[$U7]=$X
+
+DDD=`date +"%FT%R%:z %Z"`
+
+# crrosetta
+rrdtool graph \
+--width 800 \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Rosetta@home $DDD " \
+-v "Credits" \
+-Y --rigid -l ${myArrayLower['crrosetta']} -u ${myArrayUpper['crrosetta']} \
+boinc-crr.png \
+DEF:crr=boinc.rrd:crrosetta:LAST \
+LINE2:crr#0000FF:"Rosetta@home" \
+GPRINT:crr:LAST:"\t\t\tCurr\: %0.0lf \t" \
+2>&1 > /dev/null
+
+# creinstein
+rrdtool graph \
+--width 800 \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Einstein@Home $DDD " \
+-v "Credits" \
+-Y --rigid -l ${myArrayLower['creinstein']} -u ${myArrayUpper['creinstein']}  \
+boinc-cre.png \
+DEF:cre=boinc.rrd:creinstein:LAST \
+LINE2:cre#00FF00:"Einstein@Home" \
+GPRINT:cre:LAST:"\t\t\tCurr\: %0.0lf \t" \
+2>&1 > /dev/null
+
+# crseti
+#-Y --rigid -l ${myArrayLower['crseti']} -u ${myArrayUpper['crseti']} \
+rrdtool graph \
+--width 800 \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC SETI@home $DDD " \
+-v "Credits" \
+boinc-crs.png \
+DEF:crs=boinc.rrd:crseti:LAST \
+LINE2:crs#FF0000:"SETI@home" \
+GPRINT:crs:LAST:"\t\t\tCurr\: %0.0lf \t" \
+2>&1 > /dev/null
+
+# crlhc
+#-Y --rigid -l ${myArrayLower['crlhc']} -u ${myArrayUpper['crlhc']} \
+rrdtool graph \
+--width 800 \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC LHC@home $DDD " \
+-v "Credits" \
+boinc-crl.png \
+DEF:crl=boinc.rrd:crlhc:LAST \
+LINE2:crl#FF0000:"LHC@home" \
+GPRINT:crl:LAST:"\t\t\tCurr\: %0.0lf \t" \
+2>&1 > /dev/null
+
+# crwcg
+#-Y --rigid -l ${myArrayLower['crwcg']} -u ${myArrayUpper['crwcg']} \
+rrdtool graph \
+--width 800 \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC WCG $DDD " \
+-v "Credits" \
+boinc-crw.png \
+DEF:crw=boinc.rrd:crwcg:LAST \
+LINE2:crw#BBBBBB:"WCG" \
+GPRINT:crw:LAST:"\t\t\tCurr\: %0.0lf \t" \
+2>&1 > /dev/null
+
+# crmilkyway
+#-Y --rigid -l ${myArrayLower['crmilkyway']} -u ${myArrayUpper['crmilkyway']} \
+rrdtool graph \
+--width 800 \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC MilkyWay@home $DDD " \
+-v "Credits" \
+boinc-crm.png \
+DEF:crm=boinc.rrd:crmilkyway:LAST \
+LINE2:crm#ea8f00:"MilkyWay@home" \
+GPRINT:crm:LAST:"\t\t\tCurr\: %0.0lf \t" \
+2>&1 > /dev/null
+
+# crminecraft
+#-Y --rigid -l ${myArrayLower['crminecraft']} -u ${myArrayUpper['crminecraft']} \
+rrdtool graph \
+--width 800 \
+--start now-4w --end now-1h \
+--font DEFAULT:8: \
+-t "[`hostname -s`] BOINC Minecraft@Home $DDD " \
+-v "Credits" \
+boinc-crt.png \
+DEF:crt=boinc.rrd:crminecraft:LAST \
+LINE2:crt#00FF00:"Minecraft@Home" \
+GPRINT:crt:LAST:"\t\t\tCurr\: %0.0lf \t" \
+2>&1 > /dev/null
+
