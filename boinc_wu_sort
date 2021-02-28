@@ -75,6 +75,7 @@ myArray=(\
 ['boinc.bakerlab.org/rosetta/']='Rosetta@home' \
 ['setiathome.berkeley.edu/']='SETI@home' \
 ['lhcathome.cern.ch/lhcathome/']='LHC@home' \
+['minecraftathome.com/minecrafthome/']='Minecraft@Home' \
 ['www.worldcommunitygrid.org/']='WCG')
 
 declare -A myShortArray
@@ -85,6 +86,7 @@ myShortArray=(\
 ['boinc.bakerlab.org/rosetta/']='R@h' \
 ['setiathome.berkeley.edu/']='SETI@h' \
 ['lhcathome.cern.ch/lhcathome/']='LHC@h' \
+['minecraftathome.com/minecrafthome/']='Mc@h' \
 ['www.worldcommunitygrid.org/']='WCG')
 
 declare -A updownLoaded
@@ -149,6 +151,7 @@ function addEntry {
 	CPU2=$CPU
 	/bin/grep -q "GPU" <<< $CPU && CPU="G+"
 	/bin/grep -q -e "AMD" -e "ATI" <<< $CPU2 && CPU="g+"
+	/bin/grep -q -e "Intel" <<< $CPU2 && CPU="i+"
 	CPU=`/bin/echo $CPU| /usr/bin/cut -d' ' -f 5`
 	#[ "x${CPU:0:1}" == "x0" ] && CPU="G+"
 	RCV=`/bin/echo $RCV| /usr/bin/cut -d' ' -f 5-`
@@ -459,8 +462,8 @@ for i in `/bin/cat $BOINCPROJECTS | grep -e "master URL" -e "suspended via" -e "
 	fi
 done
 
-/bin/echo "Project      _TtW_A_  ResShare_  UsrTotal_ UsrExpAvg_ HostTotal_HostExpAvg" | /usr/bin/column -s'_' -t
-/bin/echo "-------      _---_-_----------_----------_----------_----------_----------" | /usr/bin/column -s'_' -t
+/bin/echo "Project       _TtW_A_  ResShare_  UsrTotal_ UsrExpAvg_ HostTotal_HostExpAvg" | /usr/bin/column -s'_' -t
+/bin/echo "-------       _---_-_----------_----------_----------_----------_----------" | /usr/bin/column -s'_' -t
 
 PRJS=`/bin/cat $BOINCPROJECTS | /bin/grep "master URL:" | /usr/bin/cut -d' ' -f 6-  | /usr/bin/paste -sd' ' - `
 for i in `/bin/cat $BOINCTASKS | /bin/grep -e proj | word_counter $PRJS | /bin/sed -e "s/https\{0,\}:\/\///g"`; do
@@ -472,8 +475,8 @@ for i in `/bin/cat $BOINCTASKS | /bin/grep -e proj | word_counter $PRJS | /bin/s
 	/bin/echo $LB2"_"$VV"_"${prjAllowWorks[$LB]}"_"${prjResNCredit[$LB]}
 done | /usr/bin/column -s'_' -t | /usr/bin/sort -r -n -k5
 
-/bin/echo "-------      _---_-_----------_----------_----------_----------_----------" | /usr/bin/column -s'_' -t
-/bin/echo "             _   _ _"`/usr/bin/printf "%10d_%10d_%10d_%10d_%10d" $T_RSHR $T_USR_T $T_USR_E $T_HOS_T $T_HOS_E` | /usr/bin/column -s'_' -t
+/bin/echo "-------       _---_-_----------_----------_----------_----------_----------" | /usr/bin/column -s'_' -t
+/bin/echo "              _   _ _"`/usr/bin/printf "%10d_%10d_%10d_%10d_%10d" $T_RSHR $T_USR_T $T_USR_E $T_HOS_T $T_HOS_E` | /usr/bin/column -s'_' -t
 
 
 /bin/rm $BOINCTASKS

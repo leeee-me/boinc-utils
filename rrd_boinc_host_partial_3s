@@ -14,6 +14,7 @@ myArray=(\
 ['boinc.bakerlab.org/rosetta/']='crrosetta' \
 ['lhcathome.cern.ch/lhcathome/']='crlhc' \
 ['www.worldcommunitygrid.org/']='crwcg' \
+['minecraftathome.com/minecrafthome/']='crminecraft' \
 ['x1']='crx1' \
 ['x2']='crx2' \
 ['x3']='crx3')
@@ -26,6 +27,7 @@ myLblArray=(\
 ['crrosetta']='Rosetta@home' \
 ['crlhc']='LHC@home' \
 ['crwcg']='WCG' \
+['crminecraft']='Minecraft@Home' \
 ['crx1']='...' \
 ['crx2']='...' \
 ['crx3']='...')
@@ -38,6 +40,7 @@ myLblAbbArray=(\
 ['crrosetta']='R@h' \
 ['crlhc']='L@h' \
 ['crwcg']='WCG' \
+['crminecraft']='Mt@H' \
 ['crx1']='.' \
 ['crx2']='.' \
 ['crx3']='.')
@@ -45,7 +48,7 @@ myLblAbbArray=(\
 D=`boinccmd --get_project_status | grep -e "host_total_credit:" -e "master URL:" | awk '{print $2 $3}' | sed -e 's/URL:[^:]*:\/\///g'`
 U1=`echo $D | awk '{print $1}'`; U1=${U1:-x1}
 U2=`echo $D | awk '{print $3}'`; U2=${U2:-x2}
-U3=`echo $D | awk '{print $5}'`; U2=${U2:-x3}
+U3=`echo $D | awk '{print $5}'`; U3=${U3:-x3}
 
 F1=${myArray[$U1]}
 F2=${myArray[$U2]}
@@ -69,7 +72,7 @@ rrdtool create boinc_host.rrd --start now-30d --step 1h \
 D=`boinccmd --get_project_status | grep -e "host_expavg_credit:" -e "master URL:" | awk '{print $2 $3}' | sed -e 's/URL:[^:]*:\/\///g'`
 U1=`echo $D | awk '{print $1}'`; U1=${U1:-x1}
 U2=`echo $D | awk '{print $3}'`; U2=${U2:-x2}
-U3=`echo $D | awk '{print $5}'`; U2=${U2:-x3}
+U3=`echo $D | awk '{print $5}'`; U3=${U3:-x3}
 
 F1=${myArray[$U1]}
 F2=${myArray[$U2]}

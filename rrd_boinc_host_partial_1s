@@ -14,6 +14,7 @@ myArray=(\
 ['boinc.bakerlab.org/rosetta/']='crrosetta' \
 ['lhcathome.cern.ch/lhcathome/']='crlhc' \
 ['www.worldcommunitygrid.org/']='crwcg' \
+['minecraftathome.com/minecrafthome/']='crminecraft' \
 ['x1']='crx1')
 
 declare -A myLblArray
@@ -25,6 +26,7 @@ myLblArray=(\
 ['crseti']='SETI@home' \
 ['crlhc']='LHC@home' \
 ['crwcg']='WCG' \
+['crminecraft']='Minecraft@Home' \
 ['crx1']='...')
 
 declare -A myLblAbbArray
@@ -36,6 +38,7 @@ myLblAbbArray=(\
 ['crseti']='S@h' \
 ['crlhc']='L@h' \
 ['crwcg']='WCG' \
+['crminecraft']='Mc@H' \
 ['crx1']='.')
 
 D=`boinccmd --get_project_status | grep -e "host_total_credit:" -e "master URL:" | awk '{print $2 $3}' | sed -e 's/URL:[^:]*:\/\///g'`

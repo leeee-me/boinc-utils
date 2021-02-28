@@ -50,6 +50,7 @@ myArray=(\
 	['boinc.bakerlab.org/rosetta/']='Rosetta' \
 	['setiathome.berkeley.edu/']='SETI' \
 	['lhcathome.cern.ch/lhcathome/']='LHC' \
+	['minecraftathome.com/minecrafthome/']='Minecraft' \
 	['www.worldcommunitygrid.org/']='WCG')
 
 j=0
@@ -115,6 +116,7 @@ for i in `boinccmd --get_simple_gui_info |  grep resources | cut -d' ' -f5-`; do
 	ii=`echo $i | awk '{printf "%2d", $1}'`
 	grep -q "NVIDIA" <<< $i && ii="G+"
 	grep -q "AMD" <<< $iii && ii="g+"
+	grep -q "Intel" <<< $iii && ii="i+"
 	echo -n ${WHITE}" $ii (${arrproj[$j]})"${BLUE}; 
 	if [ ${#arrname[$j]} -gt 80 ]; then echo " ${arrname[$j]:0:80}"; else echo " ${arrname[$j]}"; fi
 	
