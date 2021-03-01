@@ -386,7 +386,7 @@ if [ -z "$noTasks" ]; then
 	/bin/echo -n $CLEAR
 
 	/bin/echo "----------------"
-	/bin/echo "Scheduler state: "${RED}"abor"${YELLOW}"ted"${WHITE}" | "${RED}"unin"${YELLOW}"itialized"${WHITE}" | "${RED}"pree"${YELLOW}"mpted"${WHITE}" | "${RED}"sche"${YELLOW}"duled"${WHITE}" "" // "" uP resources: "${RED}"1..n"${YELLOW}" CPUs"${WHITE}" | "${RED}"G+"${YELLOW}" nVidia GPU"${WHITE}" | "${RED}"g+"${YELLOW}" AMD/ATI GPU"${WHITE}" "
+	/bin/echo "Scheduler state: "${RED}"abor"${YELLOW}"ted"${WHITE}" | "${RED}"unin"${YELLOW}"itialized"${WHITE}" | "${RED}"pree"${YELLOW}"mpted"${WHITE}" | "${RED}"sche"${YELLOW}"duled"${WHITE}" "" // "" uP resources: "${RED}"1..n"${YELLOW}" CPUs"${WHITE}" | "${RED}"G+"${YELLOW}" nVidia GPU"${WHITE}" | "${RED}"g+"${YELLOW}" AMD/ATI GPU"${WHITE}" | "${RED}"i+"${YELLOW}" Intel GPU"${WHITE}" "
 
 	/bin/echo "----------------"
 	/bin/echo -n "App Ver stats:"
@@ -471,7 +471,7 @@ for i in `/bin/cat $BOINCTASKS | /bin/grep -e proj | word_counter $PRJS | /bin/s
 	VV=`/bin/echo $i | /usr/bin/cut -d' ' -f 2`
 	VV=`/usr/bin/printf "%3d" $VV`
 	LB=${myArray[$UU]}
-	LB2=`/usr/bin/printf "%-13s" $LB`
+	LB2=`/usr/bin/printf "%-14s" $LB`
 	/bin/echo $LB2"_"$VV"_"${prjAllowWorks[$LB]}"_"${prjResNCredit[$LB]}
 done | /usr/bin/column -s'_' -t | /usr/bin/sort -r -n -k5
 
